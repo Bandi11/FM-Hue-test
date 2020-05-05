@@ -1,10 +1,56 @@
-from PySide2 import QtWidgets, QtCore
+from PySide2 import QtWidgets, QtCore, QtGui
 from mainWindow import Ui_mainwidget as mPage
 from base import Ui_MainWindow as baseWindow
 from testFrame import Ui_testPage as testPage
 from testFinalFrame import Ui_Form as finalPage
+from ColorLabel import Ui_ColorLabel as CLabel
+import json
+
+
+class ColorLabel(CLabel, QtWidgets.QWidget):
+
+    def __init__(self, ColorIndex, dragable, parentFrame, position):
+        super(ColorLabel, self).__init__()
+        self.setupUi(self)
+        self.ColorIndex = ColorIndex
+        self.setAcceptDrops(True)
+        self.drag = dragable
+        self.parentFrame = parentFrame
+        self.positionIndex =position
+
+    def mousePressEvent(self, event):
+        """this function is needed for the drag and drop"""
+        if event.button() == QtCore.Qt.MouseButton.LeftButton and self.drag == True:
+
+            drag = QtGui.QDrag(self)
+            mimeData = QtCore.QMimeData()
+            mimeData.setText(json.dumps({"index": self.positionIndex, "color": self.ColorIndex}))
+            drag.setMimeData(mimeData)
+            tick = QtGui.QPixmap(r"C:\Users\Andras Meszaros\Desktop\tickTest")
+            drag.setPixmap(tick)
+            drag.exec_()
+
+
+    def dropEvent(self, e):
+        """this function is called when something is dropped on this widget"""
+
+        #todo it changes only the label text not the colorlabel
+        dataTransfered = json.loads(e.mimeData().text())
+        fromIndex = dataTransfered["index"]
+        color = dataTransfered["color"]
+        self.parentFrame.ShiftsGridValues(stopPos=self.positionIndex, startPos=fromIndex, dir="right")
+        self.label.setText(str(color))
+    def dragEnterEvent(self, event: QtGui.QDragEnterEvent):
+
+        if event.mimeData().hasFormat("text/plain") and self.drag:
+            event.accept()
+        else:
+            event.ignore()
+
+
 
 class finalPageApp(finalPage, QtWidgets.QWidget):
+
     def __init__(self):
         super(finalPageApp,self).__init__()
         self.setupUi(self)
@@ -22,6 +68,20 @@ class testFrameApp(testPage, QtWidgets.QWidget):
     def __init__(self):
         super(testFrameApp, self).__init__()
         self.setupUi(self)
+
+    def ShiftsGridValues(self, startPos, stopPos, dir=None):
+        """ shift the gridlayout data to the right or to the left, used mainly during drag and drop
+        startPos means the empty label in the gridlayout from where the value were dragged, the stopPos is where the shifting ends"""
+
+        if dir is None:
+            pass
+        elif dir == "right":
+            #shifts everything one index higher
+            for i in range(startPos,stopPos,-1):
+                #the naming here can be tricky the stopPos is the smaller
+                toWidget = self.horizontalLayout.itemAt(i-1)
+                moveWidget = self.horizontalLayout.itemAt(i)
+                self.horizontalLayout.replaceWidget(moveWidget, toWidget)
 
 class testMainPage(mPage,QtWidgets.QWidget):
     def __init__(self):
@@ -43,6 +103,7 @@ class App(baseWindow, QtWidgets.QMainWindow):
         if self.nextButton is not None:
             self.nextButton.show()
             self.nextButton.clicked.connect(self.nextButtonPushed)
+
 
         #startPage
         newPage = testMainPage()
@@ -123,9 +184,15 @@ class App(baseWindow, QtWidgets.QMainWindow):
                 value = 85
             else:
                 value = i
-            colorLabel = QtWidgets.QLabel(tPage)
+
+            if rangeOfColors.start == i or rangeOfColors.stop == i+1:
+                dragable = False
+            else:
+                dragable = True
+
+            colorLabel = ColorLabel(ColorIndex=value, dragable=dragable, parentFrame=tPage, position=i)
             colorLabel.setObjectName("colorLabel_"+str(value))
-            colorLabel.setText(str(value))
+            colorLabel.label.setText(str(value))
             self.colorLabels[str(value)] = colorLabel
             tPage.horizontalLayout.addWidget(colorLabel)
 
