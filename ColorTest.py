@@ -17,12 +17,15 @@ class ColorLabel(CLabel, QtWidgets.QWidget):
         self.drag = dragable
         self.parentFrame = parentFrame
         self.positionIndex =position
+        self.dragInfo = None
 
     def mousePressEvent(self, event):
         """this function is needed for the drag and drop"""
         if event.button() == QtCore.Qt.MouseButton.LeftButton and self.drag == True:
 
+            self.dragInfo = "dragged"
             drag = QtGui.QDrag(self)
+            #mimeData might be not needed
             mimeData = QtCore.QMimeData()
             mimeData.setText(json.dumps({"index": self.positionIndex, "color": self.ColorIndex}))
             drag.setMimeData(mimeData)
@@ -35,11 +38,13 @@ class ColorLabel(CLabel, QtWidgets.QWidget):
         """this function is called when something is dropped on this widget"""
 
         #todo it changes only the label text not the colorlabel
+        self.dragInfo = "dropped"
         dataTransfered = json.loads(e.mimeData().text())
         fromIndex = dataTransfered["index"]
         color = dataTransfered["color"]
-        self.parentFrame.ShiftsGridValues(stopPos=self.positionIndex, startPos=fromIndex, dir="right")
-        self.label.setText(str(color))
+        droppedIndex = self.positionIndex
+        self.parentFrame.ShiftsGridValues(toIndex=droppedIndex, fromIndex=fromIndex)
+        #self.label.setText(str(color))
     def dragEnterEvent(self, event: QtGui.QDragEnterEvent):
 
         if event.mimeData().hasFormat("text/plain") and self.drag:
@@ -65,23 +70,53 @@ class OveriterrationError(Exception):
         """todo"""
         pass
 class testFrameApp(testPage, QtWidgets.QWidget):
-    def __init__(self):
+    def __init__(self, parentFrame=None):
         super(testFrameApp, self).__init__()
         self.setupUi(self)
+        self.parentFrame = parentFrame
 
-    def ShiftsGridValues(self, startPos, stopPos, dir=None):
-        """ shift the gridlayout data to the right or to the left, used mainly during drag and drop
-        startPos means the empty label in the gridlayout from where the value were dragged, the stopPos is where the shifting ends"""
+    def ShiftsGridValues(self, fromIndex, toIndex):
+        temporaryList = []
+        i = 0
+        while (self.horizontalLayout.itemAt(i)) is not None:
+            temporaryList.append(self.horizontalLayout.itemAt(i).wid)
+            i += 1
+        orderedList = []
+        minimum = min(fromIndex, toIndex)
+        i = 0
+        while i < minimum:
+            orderedList.append(temporaryList[i])
+            i += 1
+        if minimum == toIndex:
 
-        if dir is None:
-            pass
-        elif dir == "right":
-            #shifts everything one index higher
-            for i in range(startPos,stopPos,-1):
-                #the naming here can be tricky the stopPos is the smaller
-                toWidget = self.horizontalLayout.itemAt(i-1)
-                moveWidget = self.horizontalLayout.itemAt(i)
-                self.horizontalLayout.replaceWidget(moveWidget, toWidget)
+            orderedList.append(temporaryList[fromIndex])
+            while i < len(temporaryList):
+                if i != fromIndex:
+                    orderedList.append(temporaryList[i])
+                i += 1
+        elif minimum == fromIndex:
+            i += 1
+            while i <= toIndex:
+                orderedList.append(temporaryList[i])
+                i += 1
+
+            orderedList.append(temporaryList[fromIndex])
+
+            while i < len(temporaryList):
+                orderedList.append(temporaryList[i])
+                i += 1
+
+        i = 0
+        for element in orderedList:
+            element.positionIndex = i
+            i += 1
+        #debug
+        # for element in orderedList:
+        #     print(element.ColorIndex)
+
+        self.parentFrame.refreshTestPage(orderedList)
+
+
 
 class testMainPage(mPage,QtWidgets.QWidget):
     def __init__(self):
@@ -109,6 +144,21 @@ class App(baseWindow, QtWidgets.QMainWindow):
         newPage = testMainPage()
         self.gridLayout.addWidget(newPage)
         del newPage
+
+    def refreshTestPage(self, orderedList):
+        """refreshes the testpage after a drag and drop event"""
+        refreshed = testFrameApp(parentFrame=self)
+        self.removingFrame()
+        for element in orderedList:
+            colorLabel = ColorLabel(ColorIndex=element.ColorIndex, dragable=element.drag,
+                                    parentFrame=refreshed, position=element.positionIndex)
+            colorLabel.setObjectName("colorLabel_"+str(element.ColorIndex))
+            colorLabel.label.setText(str(element.ColorIndex))
+            self.colorLabels[str(element.ColorIndex)] = colorLabel
+            refreshed.horizontalLayout.addWidget(colorLabel)
+        self.connect(refreshed.pushButton, QtCore.SIGNAL('clicked()'), self.nextButtonPushed)
+
+        self.gridLayout.addWidget(refreshed)
 
     def removingFrame(self):
         """Use it only if there is only one frame in the basegrid otherwise use an other function"""
@@ -144,7 +194,7 @@ class App(baseWindow, QtWidgets.QMainWindow):
     def changingToTest(self):
         """ Changing to a testPage also changes between tests"""
         if self.testNum <=3:
-            tPage = testFrameApp()
+            tPage = testFrameApp(parentFrame=self)
             tPage = self.fillingUpwithColorLabels(self.testNum, tPage)
             try:
                 self.removingFrame()
@@ -179,6 +229,7 @@ class App(baseWindow, QtWidgets.QMainWindow):
         else:
             raise OveriterrationError
 
+        pos = 0
         for i in rangeOfColors:
             if i == 0:
                 value = 85
@@ -190,11 +241,12 @@ class App(baseWindow, QtWidgets.QMainWindow):
             else:
                 dragable = True
 
-            colorLabel = ColorLabel(ColorIndex=value, dragable=dragable, parentFrame=tPage, position=i)
+            colorLabel = ColorLabel(ColorIndex=value, dragable=dragable, parentFrame=tPage, position=pos)
             colorLabel.setObjectName("colorLabel_"+str(value))
             colorLabel.label.setText(str(value))
             self.colorLabels[str(value)] = colorLabel
             tPage.horizontalLayout.addWidget(colorLabel)
+            pos += 1
 
         return tPage
 
