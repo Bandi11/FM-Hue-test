@@ -5,6 +5,9 @@ from testFrame import Ui_testPage as testPage
 from testFinalFrame import Ui_Form as finalPage
 from ColorLabel import Ui_ColorLabel as CLabel
 import json
+import pandas as pd
+import os
+import datetime
 
 
 class ColorLabel(CLabel, QtWidgets.QWidget):
@@ -139,6 +142,11 @@ class App(baseWindow, QtWidgets.QMainWindow):
             self.nextButton.show()
             self.nextButton.clicked.connect(self.nextButtonPushed)
 
+        #extra variables
+
+        #stores the data of the test during testing, it is updated every time when the nextButton is pushed
+        self.testData = {"0": [], "1": [], "2": [], "3": []}
+
 
         #startPage
         newPage = testMainPage()
@@ -178,18 +186,94 @@ class App(baseWindow, QtWidgets.QMainWindow):
         newPage = testMainPage()
         self.removingFrame()
         self.gridLayout.addWidget(newPage)
+        self.testData = {"0": [], "1": [], "2": [], "3": []}
 
     def nextButtonPushed(self):
         """Loads the next page when button pushed"""
+
+        currentItem = self.gridLayout.itemAt(0).wid
+        # ColorLabelsLayout has all the colorLabels
+        ColorLabelsLayout = currentItem.horizontalLayout
+        # saving test data
+        i = 0
+        templist = []
+        while ColorLabelsLayout.itemAt(i) is not None:
+            colorLabeldata = ColorLabelsLayout.itemAt(i).wid.ColorIndex
+
+            if colorLabeldata == 85 and self.testNum == 0:
+                colorLabeldata = 0
+
+            templist.append(colorLabeldata)
+            i += 1
+        self.testData[str(self.testNum)] = templist
+        #changing page
         self.testNum += 1
         self.changingToTest()
-    def saveData(self):
+        print(self.testData)
+
+
+
+    def saveData(self, nameEditValue, checkBoxValue):
         """TODO saves the data of the finish screen"""
-        pass
+
+        currentItem = self.gridLayout.itemAt(0).wid
+        def evaulateData(self):
+            """calculate test scores"""
+
+            # generating template
+            templateDict = {}
+            for i in range(1, 86):
+                templateDict[i] = None
+
+            for k, v in self.testData.items():
+                # usedData doesn't contain fixed icons
+                usedData = v[1:-1]
+                fixedFirst = v[0]
+                fixedLast = v[-1]
+                for i in range(0, len(usedData)):
+                    if i == 0 or i == len(usedData)-1:
+                        if i == 0:
+                            score = abs((fixedFirst - usedData[i])) + abs((usedData[i + 1] - usedData[i]))
+                        elif i == len(usedData)-1:
+                            score = abs((usedData[i - 1] - usedData[i])) + abs((fixedLast - usedData[i]))
+                    else:
+                        score = abs((usedData[i - 1] - usedData[i])) + abs((usedData[i + 1] - usedData[i]))
+
+                    templateDict[usedData[i]] = score
+
+            return templateDict
+
+        scoreData = evaulateData(self)
+        scoreDataFrame = pd.DataFrame(scoreData.values(), index=scoreData.keys(), columns=["score"])
+
+        time = datetime.datetime.now()
+        folderName = nameEditValue + "_" + str(time.year) + "_" + str(time.month) + "_" + str(time.day)
+        #saving data into different files
+        if not os.path.exists(os.path.join("data", folderName)):
+            os.makedirs(os.path.join("data", folderName))
+
+        scoreDataFrame.to_csv(r"data\{0}\{0}.csv".format(folderName), sep=",")
+
+        userMetaData = {"name": nameEditValue, "colorBlind": checkBoxValue}
+
+        with open(r"data\{0}\{0}.json".format(folderName), "w") as f:
+            json.dump(userMetaData, f, sort_keys=True, indent=4)
+
+
+
     def finishButtonPushed(self):
         """TODO collect the data of the finish page"""
-        self.saveData()
-        self.changingToMainPage()
+        currentItem = self.gridLayout.itemAt(0).wid
+        nameEdit = currentItem.horizontalLayout.itemAt(1).wid
+        nameEditText = nameEdit.text()
+        if nameEdit.isModified() is False:
+            pass
+        else:
+            nameEdit.clear()
+            blindBox = currentItem.horizontalLayout_2.itemAt(1).wid
+            blindBoxValue = blindBox.isChecked()
+            self.saveData(nameEditText, blindBoxValue)
+            self.changingToMainPage()
 
     def changingToTest(self):
         """ Changing to a testPage also changes between tests"""

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'ColorLabel.ui'
+## Form generated from reading UI file 'colorLabel.ui'
 ##
 ## Created by: Qt User Interface Compiler version 5.14.2
 ##
@@ -25,6 +25,11 @@ class Ui_ColorLabel(object):
         self.gridLayout.setObjectName(u"gridLayout")
         self.label = QLabel(ColorLabel)
         self.label.setObjectName(u"label")
+        sizePolicy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.label.sizePolicy().hasHeightForWidth())
+        self.label.setSizePolicy(sizePolicy)
         self.label.setAlignment(Qt.AlignCenter)
 
         self.gridLayout.addWidget(self.label, 0, 0, 1, 1)

@@ -36,10 +36,10 @@ class Ui_Form(object):
 
         self.horizontalLayout.addWidget(self.label)
 
-        self.lineEdit = QLineEdit(self.frame)
-        self.lineEdit.setObjectName(u"lineEdit")
+        self.nameEdit = QLineEdit(self.frame)
+        self.nameEdit.setObjectName(u"nameEdit")
 
-        self.horizontalLayout.addWidget(self.lineEdit)
+        self.horizontalLayout.addWidget(self.nameEdit)
 
 
         self.verticalLayout.addLayout(self.horizontalLayout)
@@ -61,6 +61,9 @@ class Ui_Form(object):
 
         self.finishButton = QPushButton(self.frame)
         self.finishButton.setObjectName(u"finishButton")
+        font = QFont()
+        font.setStyleStrategy(QFont.PreferDefault)
+        self.finishButton.setFont(font)
 
         self.verticalLayout.addWidget(self.finishButton)
 
