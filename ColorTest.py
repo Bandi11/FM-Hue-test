@@ -8,7 +8,35 @@ import json
 import pandas as pd
 import os
 import datetime
+from randomFinal import Ui_randomFinal as rFinal
+from selectingStartData import Ui_selectingStartData as selectStartData
+import re
+#TODO amikor egy randomizalt sekvenciat probálsz behozni akkor elevszik a randomizaltsag a masodik testapge-től.
+#TODo ne a self.randomizing hasznald az nem arra van az arra
+class selectStartDataApp(selectStartData, QtWidgets.QWidget):
 
+    def __init__(self, parentFrame):
+        super(selectStartDataApp, self).__init__()
+        self.setupUi(self)
+
+        self.parentFrame = parentFrame
+        self.populateDropDown()
+
+    def populateDropDown(self):
+
+        root = "data\orders"
+        if os.path.exists(root):
+            files = [f for f in os.listdir(root) if os.path.isfile(os.path.join(root, f))]
+            pattern = re.compile("^(.*?)_([0-9]{4})_([1-9]+?)_([1-9]+?).(csv)$")
+            csvFileMatches = [pattern.match(f) for f in files if pattern.match(f)]
+            csvFiles = list(map(lambda x: x.group(), csvFileMatches))
+            fileNames = list(map(lambda x: x.group(1), csvFileMatches))
+            # objectDict stores the elements in the drop down menu, name---file name pairs
+            self.parentFrame.objectDict = {}
+            for k, v in zip(fileNames, csvFiles):
+                self.parentFrame.objectDict[k] = v
+            self.startDataList.addItems(fileNames)
+        self.parentFrame.objectDict["No randomization"] = ""
 
 class ColorLabel(CLabel, QtWidgets.QWidget):
 
@@ -19,7 +47,7 @@ class ColorLabel(CLabel, QtWidgets.QWidget):
         self.setAcceptDrops(True)
         self.drag = dragable
         self.parentFrame = parentFrame
-        self.positionIndex =position
+        self.positionIndex = position
         self.dragInfo = None
 
     def mousePressEvent(self, event):
@@ -28,7 +56,6 @@ class ColorLabel(CLabel, QtWidgets.QWidget):
 
             self.dragInfo = "dragged"
             drag = QtGui.QDrag(self)
-            #mimeData might be not needed
             mimeData = QtCore.QMimeData()
             mimeData.setText(json.dumps({"index": self.positionIndex, "color": self.ColorIndex}))
             drag.setMimeData(mimeData)
@@ -44,10 +71,9 @@ class ColorLabel(CLabel, QtWidgets.QWidget):
         self.dragInfo = "dropped"
         dataTransfered = json.loads(e.mimeData().text())
         fromIndex = dataTransfered["index"]
-        color = dataTransfered["color"]
         droppedIndex = self.positionIndex
         self.parentFrame.ShiftsGridValues(toIndex=droppedIndex, fromIndex=fromIndex)
-        #self.label.setText(str(color))
+
     def dragEnterEvent(self, event: QtGui.QDragEnterEvent):
 
         if event.mimeData().hasFormat("text/plain") and self.drag:
@@ -56,11 +82,16 @@ class ColorLabel(CLabel, QtWidgets.QWidget):
             event.ignore()
 
 
+class randomFinalApp(rFinal, QtWidgets.QWidget):
+
+    def __init__(self):
+        super(randomFinalApp, self).__init__()
+        self.setupUi(self)
 
 class finalPageApp(finalPage, QtWidgets.QWidget):
 
     def __init__(self):
-        super(finalPageApp,self).__init__()
+        super(finalPageApp, self).__init__()
         self.setupUi(self)
 
 class baseFrameError(Exception):
@@ -120,7 +151,6 @@ class testFrameApp(testPage, QtWidgets.QWidget):
         self.parentFrame.refreshTestPage(orderedList)
 
 
-
 class testMainPage(mPage,QtWidgets.QWidget):
     def __init__(self):
         super(testMainPage, self).__init__()
@@ -135,23 +165,49 @@ class App(baseWindow, QtWidgets.QMainWindow):
         self.nextButton = None
         #testNum contains the row of the test it can be 0,1,2,3
         self.testNum = 0
+        self.colorLabels = {}
         #actions
-        self.actionRunNewTest.triggered.connect(self.changingToTest)
+        self.actionAdd_new_start_value.triggered.connect(self.createNewRandomization)
+        self.actionRunNewTest.triggered.connect(self.startTest)
         self.actionLoad_test_results.triggered.connect(self.loadTestResults)
         if self.nextButton is not None:
             self.nextButton.show()
             self.nextButton.clicked.connect(self.nextButtonPushed)
 
-        #extra variables
 
         #stores the data of the test during testing, it is updated every time when the nextButton is pushed
         self.testData = {"0": [], "1": [], "2": [], "3": []}
 
-
+        self.randomizing = False
+        
         #startPage
         newPage = testMainPage()
         self.gridLayout.addWidget(newPage)
         del newPage
+
+    def startTest(self):
+        """called when running new test selected"""
+        #select randomization pops up first
+        firstPage = selectStartDataApp(parentFrame=self)
+        self.removingFrame()
+        self.selectButton = firstPage.selectButton
+        self.dropDownMenu = firstPage.startDataList
+        self.gridLayout.addWidget(firstPage)
+        self.connect(firstPage.selectButton, QtCore.SIGNAL('clicked()'), self.selectButtonPushed)
+    def createNewRandomization(self):
+        """creates new starting point"""
+        self.changingToTest(startData=None, rand=True)
+
+    def selectButtonPushed(self):
+        """it is called when the user selects a randomization"""
+        selectedValue = self.dropDownMenu.currentText()
+        startDataFile = self.objectDict[selectedValue]
+        if os.path.exists(os.path.join("data","orders",startDataFile)) and not selectedValue == "No randomization":
+            self.changingToTest(rand=False, startData=os.path.join("data","orders",startDataFile))
+        elif selectedValue == "No randomization":
+            self.changingToTest(rand=False, startData=None)
+        else:
+            raise FileNotFoundError
 
     def refreshTestPage(self, orderedList):
         """refreshes the testpage after a drag and drop event"""
@@ -208,15 +264,31 @@ class App(baseWindow, QtWidgets.QMainWindow):
         self.testData[str(self.testNum)] = templist
         #changing page
         self.testNum += 1
-        self.changingToTest()
+        if self.randomizing == True:
+            self.changingToTest(startData=None,rand=True)
+        else:
+            self.changingToTest(startData=None)
         print(self.testData)
 
-
-
-    def saveData(self, nameEditValue, checkBoxValue):
-        """TODO saves the data of the finish screen"""
+    def saveButtonPushed(self):
+        """it is called when the user pushes the save button on the randomization page"""
 
         currentItem = self.gridLayout.itemAt(0).wid
+        nameEdit = currentItem.horizontalLayout.itemAt(1).wid
+        nameEditText = nameEdit.text()
+        if nameEdit.isModified() is False:
+            pass
+        else:
+            nameEdit.clear()
+
+            self.saveData(nameEditText, None,True)
+            self.changingToMainPage()
+
+
+
+    def saveData(self, nameEditValue, checkBoxValue, rand=False):
+        """saves the data into the folder"""
+
         def evaulateData(self):
             """calculate test scores"""
 
@@ -225,12 +297,14 @@ class App(baseWindow, QtWidgets.QMainWindow):
             for i in range(1, 86):
                 templateDict[i] = None
 
+            colorIndex = []
             for k, v in self.testData.items():
                 # usedData doesn't contain fixed icons
                 usedData = v[1:-1]
                 fixedFirst = v[0]
                 fixedLast = v[-1]
                 for i in range(0, len(usedData)):
+                    colorIndex.append(usedData[i])
                     if i == 0 or i == len(usedData)-1:
                         if i == 0:
                             score = abs((fixedFirst - usedData[i])) + abs((usedData[i + 1] - usedData[i]))
@@ -241,28 +315,41 @@ class App(baseWindow, QtWidgets.QMainWindow):
 
                     templateDict[usedData[i]] = score
 
-            return templateDict
+            return templateDict, colorIndex
 
-        scoreData = evaulateData(self)
-        scoreDataFrame = pd.DataFrame(scoreData.values(), index=scoreData.keys(), columns=["score"])
 
-        time = datetime.datetime.now()
-        folderName = nameEditValue + "_" + str(time.year) + "_" + str(time.month) + "_" + str(time.day)
-        #saving data into different files
-        if not os.path.exists(os.path.join("data", folderName)):
-            os.makedirs(os.path.join("data", folderName))
+        if not rand:
+            scoreData, colorIndex = evaulateData(self)
+            scoreDataValues = list(scoreData.values())
+            scoreDataFrame = pd.DataFrame({"score": scoreDataValues, "colorIndex": colorIndex}, index=scoreData.keys())
 
-        scoreDataFrame.to_csv(r"data\{0}\{0}.csv".format(folderName), sep=",")
+            time = datetime.datetime.now()
+            folderName = nameEditValue + "_" + str(time.year) + "_" + str(time.month) + "_" + str(time.day)
+            #saving data into different files
+            if not os.path.exists(os.path.join(r"data\results", folderName)):
+                os.makedirs(os.path.join(r"data\results", folderName))
 
-        userMetaData = {"name": nameEditValue, "colorBlind": checkBoxValue}
+            scoreDataFrame.to_csv(r"data\results\{0}\{0}.csv".format(folderName), sep=",")
 
-        with open(r"data\{0}\{0}.json".format(folderName), "w") as f:
-            json.dump(userMetaData, f, sort_keys=True, indent=4)
+            userMetaData = {"name": nameEditValue, "colorBlind": checkBoxValue}
+
+            with open(r"data\results\{0}\{0}.json".format(folderName), "w") as f:
+                json.dump(userMetaData, f, sort_keys=True, indent=4)
+
+        else:
+            scoreData, colorIndex = evaulateData(self)
+            scoreDataValues = list(scoreData.values())
+            scoreDataFrame = pd.DataFrame({"score": scoreDataValues, "colorIndex": colorIndex}, index=scoreData.keys())
+
+            time = datetime.datetime.now()
+            folderName = nameEditValue + "_" + str(time.year) + "_" + str(time.month) + "_" + str(time.day)
+
+            scoreDataFrame.to_csv(r"data\orders\{0}.csv".format(folderName), sep=",")
 
 
 
     def finishButtonPushed(self):
-        """TODO collect the data of the finish page"""
+        """it is called when the user pushes the finnishButton on the final page of the test"""
         currentItem = self.gridLayout.itemAt(0).wid
         nameEdit = currentItem.horizontalLayout.itemAt(1).wid
         nameEditText = nameEdit.text()
@@ -275,40 +362,137 @@ class App(baseWindow, QtWidgets.QMainWindow):
             self.saveData(nameEditText, blindBoxValue)
             self.changingToMainPage()
 
-    def changingToTest(self):
-        """ Changing to a testPage also changes between tests"""
-        if self.testNum <=3:
-            tPage = testFrameApp(parentFrame=self)
-            tPage = self.fillingUpwithColorLabels(self.testNum, tPage)
-            try:
-                self.removingFrame()
-            except baseFrameError:
-                print("ERROR")
-            self.gridLayout.addWidget(tPage)
-            self.connect(tPage.pushButton, QtCore.SIGNAL('clicked()'), self.nextButtonPushed)
-        else:
-            self.testNum = 0
-            fPage = finalPageApp()
-            try:
-                self.removingFrame()
-            except baseFrameError:
-                print("ERROR")
-            self.gridLayout.addWidget(fPage)
-            self.connect(fPage.finishButton, QtCore.SIGNAL('clicked()'), self.finishButtonPushed)
+    def loadingRandomization(self, colorIndexes, tPage):
+        """loads randomized data"""
+        if self.testNum == 0:
+            #this is needed to restore the fixed values, the .csv doesn't hold the fixed lables
+            colors = [85]+colorIndexes[0:22] + [23]
+        elif self.testNum == 1:
+            colors = [22] + colorIndexes[23:41] + [43]
+        elif self.testNum == 2:
+            colors = [42] + colorIndexes[42:63] + [64]
+        elif self.testNum == 3:
+            colors = [63] + colorIndexes[63:] + [86]
+
+        pos = 0
+        for i in colors:
+            if i == colors[0] or i == colors[-1]:
+                dragable = False
+            else:
+                dragable = True
+
+            colorLabel = ColorLabel(ColorIndex=i, dragable=dragable, parentFrame=tPage, position=pos)
+            colorLabel.setObjectName("colorLabel_" + str(i))
+            colorLabel.label.setText(str(i))
+            self.colorLabels[str(i)] = colorLabel
+
+            tPage.horizontalLayout.addWidget(colorLabel)
+            pos += 1
+
+        return tPage
+
+    def changingToTest(self, rand=False, startData=None):
+        """ Changing to a testPage also changes between tests
+        if rand == True its create a new randomization
+        if stratData is provided it loads the startData instead of the default color list"""
 
 
-    def fillingUpwithColorLabels(self, testNumber, testFrameAppObject):
+        def createOriginal():
+            """creates original test, it is a solved test"""
+            if self.testNum <= 3:
+                tPage = testFrameApp(parentFrame=self)
+                tPage = self.fillingUpwithColorLabels(tPage)
+                try:
+                    self.removingFrame()
+                except baseFrameError:
+                    print("ERROR")
+                self.gridLayout.addWidget(tPage)
+                self.connect(tPage.pushButton, QtCore.SIGNAL('clicked()'), self.nextButtonPushed)
+            else:
+                self.testNum = 0
+                fPage = finalPageApp()
+                try:
+                    self.removingFrame()
+                except baseFrameError:
+                    print("ERROR")
+                self.gridLayout.addWidget(fPage)
+                self.connect(fPage.finishButton, QtCore.SIGNAL('clicked()'), self.finishButtonPushed)
+
+
+
+        def createRandomized(colorIndexes):
+            """creates a randomized test"""
+
+            if self.testNum <= 3:
+                tPage = testFrameApp(parentFrame=self)
+                tPage = self.loadingRandomization(colorIndexes, tPage)
+                try:
+                    self.removingFrame()
+                except baseFrameError:
+                    print("ERROR")
+                self.gridLayout.addWidget(tPage)
+                self.connect(tPage.pushButton, QtCore.SIGNAL('clicked()'), self.nextButtonPushed)
+            else:
+                self.testNum = 0
+                fPage = finalPageApp()
+                try:
+                    self.removingFrame()
+                except baseFrameError:
+                    print("ERROR")
+                self.gridLayout.addWidget(fPage)
+                self.connect(fPage.finishButton, QtCore.SIGNAL('clicked()'), self.finishButtonPushed)
+
+
+
+        #this is where the changingtoTest really starts
+        if not startData and not rand:
+            self.randomizing = False
+            createOriginal()
+
+        elif startData and not rand:
+            self.randomizing = False
+            rawData = pd.read_csv(startData, sep=",")
+            rawData = rawData.set_index("Unnamed: 0")
+            colorIndexes = list(rawData["colorIndex"])
+            createRandomized(colorIndexes)
+
+        elif rand:
+            #this is evaluated if we choose to create new randomized order
+            self.randomizing = True
+
+            if self.testNum <= 3:
+                tPage = testFrameApp(parentFrame=self)
+                tPage = self.fillingUpwithColorLabels(tPage)
+                try:
+                    self.removingFrame()
+                except baseFrameError:
+                    print("ERROR")
+                self.gridLayout.addWidget(tPage)
+                self.connect(tPage.pushButton, QtCore.SIGNAL('clicked()'), self.nextButtonPushed)
+            else:
+                self.testNum = 0
+                fPage = randomFinalApp()
+                try:
+                    self.removingFrame()
+                except baseFrameError:
+                    print("ERROR")
+                self.gridLayout.addWidget(fPage)
+                self.connect(fPage.saveButton, QtCore.SIGNAL('clicked()'), self.saveButtonPushed)
+
+
+
+    def fillingUpwithColorLabels(self, testFrameAppObject):
         """it fills up the the horizontal
         testNumber can be 0,1,2,3 depends which row of the FM hue test needs to be loaded"""
         tPage = testFrameAppObject
         self.colorLabels = {}
-        if testNumber == 0:
+        if self.testNum == 0:
             rangeOfColors = range(0, 24)
-        elif testNumber == 1:
+        elif self.testNum == 1:
             rangeOfColors = range(22, 44)
-        elif testNumber == 2:
+        elif self.testNum == 2:
             rangeOfColors = range(42, 65)
-        elif testNumber == 3:
+        elif self.testNum == 3:
             rangeOfColors = range(63, 87)
         else:
             raise OveriterrationError

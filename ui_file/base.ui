@@ -36,6 +36,7 @@
     </property>
     <addaction name="actionRunNewTest"/>
     <addaction name="actionLoad_test_results"/>
+    <addaction name="actionAdd_new_start_value"/>
    </widget>
    <addaction name="menuMenu"/>
   </widget>
@@ -47,6 +48,11 @@
   <action name="actionLoad_test_results">
    <property name="text">
     <string>Load test results</string>
+   </property>
+  </action>
+  <action name="actionAdd_new_start_value">
+   <property name="text">
+    <string>Add new start value</string>
    </property>
   </action>
  </widget>

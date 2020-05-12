@@ -25,6 +25,8 @@ class Ui_MainWindow(object):
         self.actionRunNewTest.setObjectName(u"actionRunNewTest")
         self.actionLoad_test_results = QAction(MainWindow)
         self.actionLoad_test_results.setObjectName(u"actionLoad_test_results")
+        self.actionAdd_new_start_value = QAction(MainWindow)
+        self.actionAdd_new_start_value.setObjectName(u"actionAdd_new_start_value")
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
         self.gridLayout_2 = QGridLayout(self.centralwidget)
@@ -48,6 +50,7 @@ class Ui_MainWindow(object):
         self.menubar.addAction(self.menuMenu.menuAction())
         self.menuMenu.addAction(self.actionRunNewTest)
         self.menuMenu.addAction(self.actionLoad_test_results)
+        self.menuMenu.addAction(self.actionAdd_new_start_value)
 
         self.retranslateUi(MainWindow)
 
@@ -58,6 +61,7 @@ class Ui_MainWindow(object):
         MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"MainWindow", None))
         self.actionRunNewTest.setText(QCoreApplication.translate("MainWindow", u"New test", None))
         self.actionLoad_test_results.setText(QCoreApplication.translate("MainWindow", u"Load test results", None))
+        self.actionAdd_new_start_value.setText(QCoreApplication.translate("MainWindow", u"Add new start value", None))
         self.menuMenu.setTitle(QCoreApplication.translate("MainWindow", u"Menu", None))
     # retranslateUi
 
