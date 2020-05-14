@@ -11,8 +11,15 @@ import datetime
 from randomFinal import Ui_randomFinal as rFinal
 from selectingStartData import Ui_selectingStartData as selectStartData
 import re
-#TODO amikor egy randomizalt sekvenciat probálsz behozni akkor elevszik a randomizaltsag a masodik testapge-től.
-#TODo ne a self.randomizing hasznald az nem arra van az arra
+from showResultsFrame import Ui_testResults as showResults
+
+class showResultsApp(showResults, QtWidgets.QWidget):
+
+    def __init__(self, parentFrame):
+        super(showResultsApp,self).__init__()
+        self.setupUi(self)
+        self.parentFrame = parentFrame
+
 class selectStartDataApp(selectStartData, QtWidgets.QWidget):
 
     def __init__(self, parentFrame):
@@ -179,21 +186,26 @@ class App(baseWindow, QtWidgets.QMainWindow):
         self.testData = {"0": [], "1": [], "2": [], "3": []}
 
         self.randomizing = False
+        self.StartData = None
         
         #startPage
         newPage = testMainPage()
         self.gridLayout.addWidget(newPage)
         del newPage
 
+
     def startTest(self):
         """called when running new test selected"""
         #select randomization pops up first
+        self.testData = {"0": [], "1": [], "2": [], "3": []}
         firstPage = selectStartDataApp(parentFrame=self)
         self.removingFrame()
         self.selectButton = firstPage.selectButton
         self.dropDownMenu = firstPage.startDataList
         self.gridLayout.addWidget(firstPage)
         self.connect(firstPage.selectButton, QtCore.SIGNAL('clicked()'), self.selectButtonPushed)
+
+
     def createNewRandomization(self):
         """creates new starting point"""
         self.changingToTest(startData=None, rand=True)
@@ -237,12 +249,40 @@ class App(baseWindow, QtWidgets.QMainWindow):
 
         self.gridLayout.removeItem(currentItem)
 
+    def dataPreprocess(self, jsonData, csvData):
+        """returns all the necesarry information from the json, and csv file"""
+        colorBlind = jsonData["colorBlind"]
+        name = jsonData["name"]
+        scoreList = csvData["score"]
+        sumScore = sum(scoreList)
+        date = jsonData["date"]
+        #todo histogram integration
+        return colorBlind, name, sumScore, date
+
+    def changingtoResultsPage(self, colorBlind, name, sumScore, date):
+        """pops a results page up when it is called"""
+        resultPage = showResultsApp(self)
+        self.removingFrame()
+        resultPage.nameEditLabel.setText(str(name))
+        resultPage.dateEditLabel.setText(str(date))
+        resultPage.scoreEditLabel.setText(str(sumScore))
+        resultPage.colorBlindnessCheckBox.setEnabled(True)
+        resultPage.colorBlindnessCheckBox.setChecked(colorBlind)
+        resultPage.colorBlindnessCheckBox.setEnabled(False)
+        self.gridLayout.addWidget(resultPage)
+        self.connect(resultPage.pushButton, QtCore.SIGNAL('clicked()'), self.backButtonPushed)
+
+    def backButtonPushed(self):
+        """returns to the main page when the back button is pushed"""
+        self.changingToMainPage()
+
+
     def changingToMainPage(self):
         """changing back to the mainPage or startPage"""
         newPage = testMainPage()
         self.removingFrame()
         self.gridLayout.addWidget(newPage)
-        self.testData = {"0": [], "1": [], "2": [], "3": []}
+
 
     def nextButtonPushed(self):
         """Loads the next page when button pushed"""
@@ -264,8 +304,10 @@ class App(baseWindow, QtWidgets.QMainWindow):
         self.testData[str(self.testNum)] = templist
         #changing page
         self.testNum += 1
-        if self.randomizing == True:
+        if self.randomizing:
             self.changingToTest(startData=None,rand=True)
+        elif self.StartData:
+            self.changingToTest(startData=self.StartData, rand=False)
         else:
             self.changingToTest(startData=None)
         print(self.testData)
@@ -331,7 +373,10 @@ class App(baseWindow, QtWidgets.QMainWindow):
 
             scoreDataFrame.to_csv(r"data\results\{0}\{0}.csv".format(folderName), sep=",")
 
-            userMetaData = {"name": nameEditValue, "colorBlind": checkBoxValue}
+            userMetaData = {"name": nameEditValue, "colorBlind": checkBoxValue,
+                            "date": str(time.year) + "." + str(time.month) + "." + str(time.day),
+                            "histogram": None}
+            #todo create histogram
 
             with open(r"data\results\{0}\{0}.json".format(folderName), "w") as f:
                 json.dump(userMetaData, f, sort_keys=True, indent=4)
@@ -346,6 +391,8 @@ class App(baseWindow, QtWidgets.QMainWindow):
 
             scoreDataFrame.to_csv(r"data\orders\{0}.csv".format(folderName), sep=",")
 
+        return folderName
+
 
 
     def finishButtonPushed(self):
@@ -359,8 +406,41 @@ class App(baseWindow, QtWidgets.QMainWindow):
             nameEdit.clear()
             blindBox = currentItem.horizontalLayout_2.itemAt(1).wid
             blindBoxValue = blindBox.isChecked()
-            self.saveData(nameEditText, blindBoxValue)
-            self.changingToMainPage()
+            fName = self.saveData(nameEditText, blindBoxValue)
+            try:
+                jsonD, csvD = self.loadingResult(fName)
+            except FileNotFoundError:
+                print ("File Not found")
+                pass
+
+            colorBlind, name, sumScore, date = self.dataPreprocess(jsonD,csvD)
+            self.changingtoResultsPage(colorBlind=colorBlind, name=name, sumScore=sumScore, date=date)
+
+    def loadingResult(self, fName):
+        """loads result from files, based on filename. Filename is not equal to user name, it is the user name
+        with the timestamp"""
+        root = r"data\results"
+        if os.path.exists(os.path.join(root, fName)):
+            folder = os.path.join(root,fName)
+            csvName = fName+".csv"
+            jsonName = fName+".json"
+            if os.path.exists(os.path.join(folder, csvName)) and os.path.exists(os.path.join(folder, jsonName)):
+                #taking in csv and json data
+                csvFile = os.path.join(folder, csvName)
+                csvData = pd.read_csv(csvFile, sep=",")
+                csvData.set_index("Unnamed: 0")
+
+                jsonFile = os.path.join(folder, jsonName)
+                with open (jsonFile, "r") as f:
+                    jsonData = json.load(f)
+            else:
+                raise FileNotFoundError
+        else:
+            raise FileNotFoundError
+
+        return jsonData, csvData
+
+
 
     def loadingRandomization(self, colorIndexes, tPage):
         """loads randomized data"""
@@ -368,7 +448,7 @@ class App(baseWindow, QtWidgets.QMainWindow):
             #this is needed to restore the fixed values, the .csv doesn't hold the fixed lables
             colors = [85]+colorIndexes[0:22] + [23]
         elif self.testNum == 1:
-            colors = [22] + colorIndexes[23:41] + [43]
+            colors = [22] + colorIndexes[22:42] + [43]
         elif self.testNum == 2:
             colors = [42] + colorIndexes[42:63] + [64]
         elif self.testNum == 3:
@@ -446,10 +526,12 @@ class App(baseWindow, QtWidgets.QMainWindow):
 
         #this is where the changingtoTest really starts
         if not startData and not rand:
+            self.StartData = None
             self.randomizing = False
             createOriginal()
 
         elif startData and not rand:
+            self.StartData = startData
             self.randomizing = False
             rawData = pd.read_csv(startData, sep=",")
             rawData = rawData.set_index("Unnamed: 0")
@@ -459,6 +541,7 @@ class App(baseWindow, QtWidgets.QMainWindow):
         elif rand:
             #this is evaluated if we choose to create new randomized order
             self.randomizing = True
+            self.StartData = None
 
             if self.testNum <= 3:
                 tPage = testFrameApp(parentFrame=self)
