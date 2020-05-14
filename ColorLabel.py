@@ -20,17 +20,27 @@ class Ui_ColorLabel(object):
     def setupUi(self, ColorLabel):
         if not ColorLabel.objectName():
             ColorLabel.setObjectName(u"ColorLabel")
-        ColorLabel.resize(400, 300)
-        self.gridLayout = QGridLayout(ColorLabel)
-        self.gridLayout.setObjectName(u"gridLayout")
-        self.label = QLabel(ColorLabel)
-        self.label.setObjectName(u"label")
+        ColorLabel.resize(100, 100)
         sizePolicy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(ColorLabel.sizePolicy().hasHeightForWidth())
+        ColorLabel.setSizePolicy(sizePolicy)
+        ColorLabel.setMaximumSize(QSize(100, 100))
+        self.gridLayout = QGridLayout(ColorLabel)
+        self.gridLayout.setSpacing(0)
+        self.gridLayout.setObjectName(u"gridLayout")
+        self.gridLayout.setContentsMargins(0, 0, 0, 0)
+        self.label = QLabel(ColorLabel)
+        self.label.setObjectName(u"label")
         sizePolicy.setHeightForWidth(self.label.sizePolicy().hasHeightForWidth())
         self.label.setSizePolicy(sizePolicy)
+        self.label.setMinimumSize(QSize(0, 0))
+        self.label.setMaximumSize(QSize(231221, 3221321))
+        self.label.setScaledContents(True)
         self.label.setAlignment(Qt.AlignCenter)
+        self.label.setMargin(1)
+        self.label.setIndent(0)
 
         self.gridLayout.addWidget(self.label, 0, 0, 1, 1)
 
@@ -42,6 +52,6 @@ class Ui_ColorLabel(object):
 
     def retranslateUi(self, ColorLabel):
         ColorLabel.setWindowTitle(QCoreApplication.translate("ColorLabel", u"Form", None))
-        self.label.setText(QCoreApplication.translate("ColorLabel", u"THIS IS HERE", None))
+        self.label.setText("")
     # retranslateUi
 

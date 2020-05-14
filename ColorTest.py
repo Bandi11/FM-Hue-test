@@ -14,6 +14,7 @@ import re
 from showResultsFrame import Ui_testResults as showResults
 import seaborn as sb
 import matplotlib.pyplot as plt
+import PySide2
 
 class showResultsApp(showResults, QtWidgets.QWidget):
 
@@ -58,6 +59,18 @@ class ColorLabel(CLabel, QtWidgets.QWidget):
         self.parentFrame = parentFrame
         self.positionIndex = position
         self.dragInfo = None
+        self.imageUrl = None
+        self.findImageUrl()
+
+
+    def findImageUrl(self):
+        """using the colorindex looks for the right image, images are named after there colorIndex"""
+        root = r"res\colors"
+        if os.path.exists(os.path.join(root, str(self.ColorIndex)+".png")):
+            self.imageUrl = os.path.join(root, str(self.ColorIndex)+".png")
+            self.label.setPixmap(QtGui.QPixmap(self.imageUrl))
+        else:
+            raise FileNotFoundError
 
     def mousePressEvent(self, event):
         """this function is needed for the drag and drop"""
@@ -68,15 +81,15 @@ class ColorLabel(CLabel, QtWidgets.QWidget):
             mimeData = QtCore.QMimeData()
             mimeData.setText(json.dumps({"index": self.positionIndex, "color": self.ColorIndex}))
             drag.setMimeData(mimeData)
-            tick = QtGui.QPixmap(r"C:\Users\Andras Meszaros\Desktop\tickTest")
-            drag.setPixmap(tick)
+            tick = QtGui.QPixmap(r"res\colors\{index}".format(index=self.ColorIndex))
+            tickSized = tick.scaled(100,100)
+            drag.setPixmap(tickSized)
             drag.exec_()
 
 
     def dropEvent(self, e):
         """this function is called when something is dropped on this widget"""
 
-        #todo it changes only the label text not the colorlabel
         self.dragInfo = "dropped"
         dataTransfered = json.loads(e.mimeData().text())
         fromIndex = dataTransfered["index"]
@@ -231,7 +244,6 @@ class App(baseWindow, QtWidgets.QMainWindow):
             colorLabel = ColorLabel(ColorIndex=element.ColorIndex, dragable=element.drag,
                                     parentFrame=refreshed, position=element.positionIndex)
             colorLabel.setObjectName("colorLabel_"+str(element.ColorIndex))
-            colorLabel.label.setText(str(element.ColorIndex))
             self.colorLabels[str(element.ColorIndex)] = colorLabel
             refreshed.horizontalLayout.addWidget(colorLabel)
         self.connect(refreshed.pushButton, QtCore.SIGNAL('clicked()'), self.nextButtonPushed)
@@ -331,7 +343,6 @@ class App(baseWindow, QtWidgets.QMainWindow):
             self.changingToTest(startData=self.StartData, rand=False)
         else:
             self.changingToTest(startData=None)
-        print(self.testData)
 
     def saveButtonPushed(self):
         """it is called when the user pushes the save button on the randomization page"""
@@ -484,7 +495,6 @@ class App(baseWindow, QtWidgets.QMainWindow):
 
             colorLabel = ColorLabel(ColorIndex=i, dragable=dragable, parentFrame=tPage, position=pos)
             colorLabel.setObjectName("colorLabel_" + str(i))
-            colorLabel.label.setText(str(i))
             self.colorLabels[str(i)] = colorLabel
 
             tPage.horizontalLayout.addWidget(colorLabel)
@@ -615,7 +625,6 @@ class App(baseWindow, QtWidgets.QMainWindow):
 
             colorLabel = ColorLabel(ColorIndex=value, dragable=dragable, parentFrame=tPage, position=pos)
             colorLabel.setObjectName("colorLabel_"+str(value))
-            colorLabel.label.setText(str(value))
             self.colorLabels[str(value)] = colorLabel
             tPage.horizontalLayout.addWidget(colorLabel)
             pos += 1

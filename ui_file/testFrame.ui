@@ -24,7 +24,14 @@
      </property>
      <layout class="QGridLayout" name="gridLayout_2">
       <item row="1" column="0" colspan="2">
-       <layout class="QHBoxLayout" name="horizontalLayout"/>
+       <layout class="QHBoxLayout" name="horizontalLayout">
+        <property name="spacing">
+         <number>0</number>
+        </property>
+        <property name="sizeConstraint">
+         <enum>QLayout::SetNoConstraint</enum>
+        </property>
+       </layout>
       </item>
       <item row="4" column="0" colspan="2">
        <widget class="QPushButton" name="pushButton">

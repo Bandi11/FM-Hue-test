@@ -30,7 +30,9 @@ class Ui_testPage(object):
         self.gridLayout_2 = QGridLayout(self.frame)
         self.gridLayout_2.setObjectName(u"gridLayout_2")
         self.horizontalLayout = QHBoxLayout()
+        self.horizontalLayout.setSpacing(0)
         self.horizontalLayout.setObjectName(u"horizontalLayout")
+        self.horizontalLayout.setSizeConstraint(QLayout.SetNoConstraint)
 
         self.gridLayout_2.addLayout(self.horizontalLayout, 1, 0, 1, 2)
 
