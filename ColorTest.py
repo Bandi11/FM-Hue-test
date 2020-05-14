@@ -12,6 +12,8 @@ from randomFinal import Ui_randomFinal as rFinal
 from selectingStartData import Ui_selectingStartData as selectStartData
 import re
 from showResultsFrame import Ui_testResults as showResults
+import seaborn as sb
+import matplotlib.pyplot as plt
 
 class showResultsApp(showResults, QtWidgets.QWidget):
 
@@ -250,16 +252,17 @@ class App(baseWindow, QtWidgets.QMainWindow):
         self.gridLayout.removeItem(currentItem)
 
     def dataPreprocess(self, jsonData, csvData):
-        """returns all the necesarry information from the json, and csv file"""
+        """returns all the necesarry information from the json, and csv file,
+        use it with loadingResult"""
         colorBlind = jsonData["colorBlind"]
         name = jsonData["name"]
         scoreList = csvData["score"]
-        sumScore = sum(scoreList)
+        sumScore = sum(list(map(lambda x: x-2 ,scoreList)))
         date = jsonData["date"]
-        #todo histogram integration
-        return colorBlind, name, sumScore, date
+        histPath = jsonData["histogram"]
+        return colorBlind, name, sumScore, date, histPath
 
-    def changingtoResultsPage(self, colorBlind, name, sumScore, date):
+    def changingtoResultsPage(self, colorBlind, name, sumScore, date,histPath):
         """pops a results page up when it is called"""
         resultPage = showResultsApp(self)
         self.removingFrame()
@@ -269,12 +272,30 @@ class App(baseWindow, QtWidgets.QMainWindow):
         resultPage.colorBlindnessCheckBox.setEnabled(True)
         resultPage.colorBlindnessCheckBox.setChecked(colorBlind)
         resultPage.colorBlindnessCheckBox.setEnabled(False)
+        histogram = QtGui.QPixmap(histPath)
+        resultPage.histogramLabel.setPixmap(histogram)
         self.gridLayout.addWidget(resultPage)
         self.connect(resultPage.pushButton, QtCore.SIGNAL('clicked()'), self.backButtonPushed)
 
     def backButtonPushed(self):
         """returns to the main page when the back button is pushed"""
         self.changingToMainPage()
+
+    def createHistogramImage(self,csvData, fname):
+        """histogram image creator,
+         it saves the file into the user folder, it works well with loadingResults"""
+        sb.set(rc={'figure.figsize':(19,9)})
+        #this is the corrected score
+        pltValue = list(map(lambda x: x-2, csvData["score"]))
+        plt.plot(pltValue, linewidth=3)
+        plt.xlabel("colors")
+        plt.ylabel("score")
+        plt.ylim(0)
+        path = os.path.join(r"data\results",fname,fname+".svg")
+        plt.savefig(path, bbox_inches='tight')
+        plt.close()
+
+        return path
 
 
     def changingToMainPage(self):
@@ -372,11 +393,10 @@ class App(baseWindow, QtWidgets.QMainWindow):
                 os.makedirs(os.path.join(r"data\results", folderName))
 
             scoreDataFrame.to_csv(r"data\results\{0}\{0}.csv".format(folderName), sep=",")
-
+            histogramPath = self.createHistogramImage(scoreDataFrame,folderName)
             userMetaData = {"name": nameEditValue, "colorBlind": checkBoxValue,
                             "date": str(time.year) + "." + str(time.month) + "." + str(time.day),
-                            "histogram": None}
-            #todo create histogram
+                            "histogram": histogramPath}
 
             with open(r"data\results\{0}\{0}.json".format(folderName), "w") as f:
                 json.dump(userMetaData, f, sort_keys=True, indent=4)
@@ -413,8 +433,9 @@ class App(baseWindow, QtWidgets.QMainWindow):
                 print ("File Not found")
                 pass
 
-            colorBlind, name, sumScore, date = self.dataPreprocess(jsonD,csvD)
-            self.changingtoResultsPage(colorBlind=colorBlind, name=name, sumScore=sumScore, date=date)
+            colorBlind, name, sumScore, date, hist = self.dataPreprocess(jsonD,csvD)
+            self.changingtoResultsPage(colorBlind=colorBlind, name=name, sumScore=sumScore,
+                                       date=date, histPath=hist)
 
     def loadingResult(self, fName):
         """loads result from files, based on filename. Filename is not equal to user name, it is the user name
@@ -603,7 +624,20 @@ class App(baseWindow, QtWidgets.QMainWindow):
 
 
     def loadTestResults(self):
-        pass
+        """opens a file dialog and the user can select test results"""
+        path = QtWidgets.QFileDialog.getExistingDirectoryUrl(self,
+                                                             self.tr("Choose Video file"),
+                                                             self.tr('~/Desktop'))
+
+        if path is "":
+            pass
+        else:
+            folderName = path.fileName()
+            jsonD, csvD = self.loadingResult(folderName)
+            colorBlind, name, sumScore, date, histPath = self.dataPreprocess(jsonD,csvD)
+            self.changingtoResultsPage(colorBlind, name, sumScore, date, histPath)
+
+
 
 
 

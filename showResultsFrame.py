@@ -39,7 +39,7 @@ class Ui_testResults(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.histogramLabel.sizePolicy().hasHeightForWidth())
         self.histogramLabel.setSizePolicy(sizePolicy)
-        self.histogramLabel.setScaledContents(True)
+        self.histogramLabel.setScaledContents(False)
         self.histogramLabel.setAlignment(Qt.AlignCenter)
 
         self.gridLayout_2.addWidget(self.histogramLabel, 3, 0, 1, 1)
@@ -97,7 +97,6 @@ class Ui_testResults(object):
         self.formLayout.setWidget(3, QFormLayout.LabelRole, self.colorBlindnessLabel)
 
         self.colorBlindnessCheckBox = QCheckBox(self.frame)
-
         self.colorBlindnessCheckBox.setObjectName(u"colorBlindnessCheckBox")
         self.colorBlindnessCheckBox.setEnabled(False)
         self.colorBlindnessCheckBox.setCheckable(True)
