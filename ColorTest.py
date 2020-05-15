@@ -15,6 +15,8 @@ from showResultsFrame import Ui_testResults as showResults
 import seaborn as sb
 import matplotlib.pyplot as plt
 import PySide2
+from colorScaleWidget import Ui_Form as scaleWidget
+
 
 class showResultsApp(showResults, QtWidgets.QWidget):
 
@@ -82,7 +84,7 @@ class ColorLabel(CLabel, QtWidgets.QWidget):
             mimeData.setText(json.dumps({"index": self.positionIndex, "color": self.ColorIndex}))
             drag.setMimeData(mimeData)
             tick = QtGui.QPixmap(r"res\colors\{index}".format(index=self.ColorIndex))
-            tickSized = tick.scaled(100,100)
+            tickSized = tick.scaled(self.geometry().width(),self.geometry().height())
             drag.setPixmap(tickSized)
             drag.exec_()
 
@@ -130,6 +132,11 @@ class testFrameApp(testPage, QtWidgets.QWidget):
         super(testFrameApp, self).__init__()
         self.setupUi(self)
         self.parentFrame = parentFrame
+        geometryW = self.parentFrame.geometry().width()
+        geometryH = self.parentFrame.geometry().height()
+        self.resize(geometryW,geometryH)
+
+
 
     def ShiftsGridValues(self, fromIndex, toIndex):
         temporaryList = []
@@ -249,6 +256,7 @@ class App(baseWindow, QtWidgets.QMainWindow):
         self.connect(refreshed.pushButton, QtCore.SIGNAL('clicked()'), self.nextButtonPushed)
 
         self.gridLayout.addWidget(refreshed)
+
 
     def removingFrame(self):
         """Use it only if there is only one frame in the basegrid otherwise use an other function"""
@@ -578,7 +586,7 @@ class App(baseWindow, QtWidgets.QMainWindow):
                 tPage = testFrameApp(parentFrame=self)
                 tPage = self.fillingUpwithColorLabels(tPage)
                 try:
-                    self.removingFrame()
+                   self.removingFrame()
                 except baseFrameError:
                     print("ERROR")
                 self.gridLayout.addWidget(tPage)
@@ -587,7 +595,7 @@ class App(baseWindow, QtWidgets.QMainWindow):
                 self.testNum = 0
                 fPage = randomFinalApp()
                 try:
-                    self.removingFrame()
+                   self.removingFrame()
                 except baseFrameError:
                     print("ERROR")
                 self.gridLayout.addWidget(fPage)
@@ -653,5 +661,5 @@ class App(baseWindow, QtWidgets.QMainWindow):
 if __name__ == "__main__":
     app = QtWidgets.QApplication()
     qtApp = App()
-    qtApp.show()
+    qtApp.showNormal()
     quit = app.exec_()

@@ -32,38 +32,26 @@ class Ui_testResults(object):
         self.frame.setFrameShadow(QFrame.Raised)
         self.gridLayout_2 = QGridLayout(self.frame)
         self.gridLayout_2.setObjectName(u"gridLayout_2")
-        self.histogramLabel = QLabel(self.frame)
-        self.histogramLabel.setObjectName(u"histogramLabel")
-        sizePolicy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.histogramLabel.sizePolicy().hasHeightForWidth())
-        self.histogramLabel.setSizePolicy(sizePolicy)
-        self.histogramLabel.setScaledContents(False)
-        self.histogramLabel.setAlignment(Qt.AlignCenter)
-
-        self.gridLayout_2.addWidget(self.histogramLabel, 3, 0, 1, 1)
-
         self.horizontalLayout = QHBoxLayout()
         self.horizontalLayout.setObjectName(u"horizontalLayout")
         self.pushButton = QPushButton(self.frame)
         self.pushButton.setObjectName(u"pushButton")
-        sizePolicy1 = QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        sizePolicy1.setHorizontalStretch(0)
-        sizePolicy1.setVerticalStretch(0)
-        sizePolicy1.setHeightForWidth(self.pushButton.sizePolicy().hasHeightForWidth())
-        self.pushButton.setSizePolicy(sizePolicy1)
+        sizePolicy = QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.pushButton.sizePolicy().hasHeightForWidth())
+        self.pushButton.setSizePolicy(sizePolicy)
         self.pushButton.setMinimumSize(QSize(50, 15))
 
         self.horizontalLayout.addWidget(self.pushButton)
 
         self.label = QLabel(self.frame)
         self.label.setObjectName(u"label")
-        sizePolicy2 = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
-        sizePolicy2.setHorizontalStretch(0)
-        sizePolicy2.setVerticalStretch(0)
-        sizePolicy2.setHeightForWidth(self.label.sizePolicy().hasHeightForWidth())
-        self.label.setSizePolicy(sizePolicy2)
+        sizePolicy1 = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+        sizePolicy1.setHorizontalStretch(0)
+        sizePolicy1.setVerticalStretch(0)
+        sizePolicy1.setHeightForWidth(self.label.sizePolicy().hasHeightForWidth())
+        self.label.setSizePolicy(sizePolicy1)
         font1 = QFont()
         font1.setPointSize(18)
         self.label.setFont(font1)
@@ -122,8 +110,20 @@ class Ui_testResults(object):
 
         self.gridLayout_2.addLayout(self.formLayout, 2, 0, 1, 1)
 
+        self.histogramLabel = QLabel(self.frame)
+        self.histogramLabel.setObjectName(u"histogramLabel")
+        sizePolicy2 = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        sizePolicy2.setHorizontalStretch(0)
+        sizePolicy2.setVerticalStretch(0)
+        sizePolicy2.setHeightForWidth(self.histogramLabel.sizePolicy().hasHeightForWidth())
+        self.histogramLabel.setSizePolicy(sizePolicy2)
+        self.histogramLabel.setScaledContents(False)
+        self.histogramLabel.setAlignment(Qt.AlignCenter)
 
-        self.gridLayout.addWidget(self.frame, 0, 1, 1, 1)
+        self.gridLayout_2.addWidget(self.histogramLabel, 3, 0, 1, 1)
+
+
+        self.gridLayout.addWidget(self.frame, 0, 0, 1, 1)
 
 
         self.retranslateUi(testResults)
@@ -133,7 +133,6 @@ class Ui_testResults(object):
 
     def retranslateUi(self, testResults):
         testResults.setWindowTitle(QCoreApplication.translate("testResults", u"Form", None))
-        self.histogramLabel.setText("")
         self.pushButton.setText(QCoreApplication.translate("testResults", u"Back", None))
         self.label.setText(QCoreApplication.translate("testResults", u"Results", None))
         self.nameLabel.setText(QCoreApplication.translate("testResults", u"Name:", None))
@@ -143,5 +142,6 @@ class Ui_testResults(object):
         self.nameEditLabel.setText("")
         self.scoreEditLabel.setText("")
         self.dateEditLabel.setText("")
+        self.histogramLabel.setText("")
     # retranslateUi
 
